@@ -1,2 +1,4 @@
 __pycache__
 venv
+search/__pycache__
+search/config.py
