@@ -2,16 +2,20 @@ import pickle
 import openai
 import numpy as np
 import json
+import os
 
 
 # Get rid later
-from search.config import openai_key
+# from search.config import openai_key
+# openai.api_key = openai_key
 
-openai.api_key = openai_key
+
 
 
 class SemanticSearch:
     def __init__(self):
+        openai_api_key = os.environ.get('OPENAI_API_KEY')
+        openai.api_key = openai_api_key
         self.model = "text-embedding-ada-002"
         with open('search/embedding_matrix.pkl', 'rb') as embedding_file:
             self.embedding_matrix = pickle.load(embedding_file)
