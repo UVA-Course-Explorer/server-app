@@ -1,9 +1,12 @@
 from flask import Flask, request
 from search.semantic_search import SemanticSearch
+from flask_cors import CORS
 
 app = Flask(__name__)
 
 semantic_search = SemanticSearch()
+
+CORS(app, origins=["https://tubular-travesseiro-db2422.netlify.app", "https://deploy-preview-1--tubular-travesseiro-db2422.netlify.app", "http://localhost:3000"])
 
 @app.route('/helloWorld')  # Change the route to match your URL
 def hello():
