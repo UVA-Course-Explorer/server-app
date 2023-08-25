@@ -1,15 +1,12 @@
 import pickle
 import openai
 import numpy as np
-import json
 import os
 
 
 # Get rid later
 # from search.config import openai_key
 # openai.api_key = openai_key
-
-
 
 
 class SemanticSearch:
@@ -46,5 +43,5 @@ class SemanticSearch:
             matrix_index = top_n_indices[i]
             top_n_data[i]["similarity_score"] = similarities[matrix_index]
 
-        return json.dumps(top_n_data)
+        return top_n_data
 
