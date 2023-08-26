@@ -40,7 +40,6 @@ async def search(request: Request):
     search_input = search_request['searchInput']
 
     json_results = semantic_search.get_search_results(search_input, academic_level_filter=academic_level_filter, semester_filter=semester_filter, n=10)
-
     encoded_results = jsonable_encoder(json_results)
     return JSONResponse(content=encoded_results)
 
@@ -50,8 +49,6 @@ async def similar_courses(request: Request):
     search_request = await request.json()
     
     mnemonic, catalog_number = search_request['mnemonic'], str(search_request['catalog_number'])
-    academic_level_filter = search_request['academicLevelFilter']
-    semester_filter = search_request['semesterFilter']
     academic_level_filter = search_request['academicLevelFilter']
     semester_filter = search_request['semesterFilter']
 

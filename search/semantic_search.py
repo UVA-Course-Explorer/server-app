@@ -19,7 +19,7 @@ class SemanticSearch:
     def load_data(self):
         # loads data from pickle files into server memory
         data_dir = "data"
-        with open(os.path.join(data_dir, 'embedding_matrix.pkl'), 'rb') as embedding_file:
+        with open(os.path.join(data_dir, 'embedding_matrix_32.pkl'), 'rb') as embedding_file:
             self.embedding_matrix = pickle.load(embedding_file)
 
         with open(os.path.join(data_dir, 'index_to_data_dict.pkl'), 'rb') as data_dict_file:
@@ -41,7 +41,7 @@ class SemanticSearch:
 
     def get_embedding(self, text, model="text-embedding-ada-002"):
         text = text.replace("\n", " ")
-        return openai.Embedding.create(input = [text], model=self.model)['data'][0]['embedding']
+        return np.array(openai.Embedding.create(input = [text], model=self.model)['data'][0]['embedding'], dtype=np.float32)
     
 
     def generate_filtered_embedding_matrix(self, academic_level_filter, semester_filter):
@@ -72,8 +72,7 @@ class SemanticSearch:
         # add the similarity scores as values in the dictionaries
         for i in range(n):
             matrix_index = top_n_indices[i]
-            top_n_data[i]["similarity_score"] = similarities[matrix_index]
-        del similarities, top_n_indices  # clear memory
+            top_n_data[i]["similarity_score"] = similarities[matrix_index].item()
         return top_n_data
 
 
@@ -88,7 +87,7 @@ class SemanticSearch:
         # add the similarity scores as values in the dictionaries
         for i in range(min(n, len(top_n_data))):
             matrix_index = top_n_filtered_indices[i]
-            top_n_data[i]["similarity_score"] = similarities[matrix_index]
+            top_n_data[i]["similarity_score"] = similarities[matrix_index].item()
         del similarities   # clear memory
         return top_n_data
 
