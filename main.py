@@ -34,16 +34,13 @@ async def get_members():
 
 @app.post('/search')
 async def search(request: Request):
-    print("br 1")
     search_request = await request.json()
     academic_level_filter = search_request['academicLevelFilter']
     semester_filter = search_request['semesterFilter']
     search_input = search_request['searchInput']
 
-    print("br 2")
     json_results = semantic_search.get_search_results(search_input, academic_level_filter=academic_level_filter, semester_filter=semester_filter, n=10)
-    
-    print("br 3")
+
     encoded_results = jsonable_encoder(json_results)
     return JSONResponse(content=encoded_results)
 
