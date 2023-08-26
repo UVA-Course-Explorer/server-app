@@ -34,10 +34,29 @@ async def get_members():
 
 @app.post('/search')
 async def search(request: Request):
-    search_input = await request.json()
-    json_results = semantic_search.get_top_results_json(search_input['searchInput'], n=10)
+    search_request = await request.json()
+    academic_level_filter = search_request['academicLevelFilter']
+    semester_filter = search_request['semesterFilter']
+    search_input = search_request['searchInput']
+
+    json_results = semantic_search.get_search_results(search_input, academic_level_filter=academic_level_filter, semester_filter=semester_filter, n=10)
     encoded_results = jsonable_encoder(json_results)
     return JSONResponse(content=encoded_results)
+
+
+@app.post('/similar_courses')
+async def similar_courses(request: Request):
+    search_request = await request.json()
+    
+    mnemonic, catalog_number = search_request['mnemonic'], str(search_request['catalog_number'])
+    academic_level_filter = search_request['academicLevelFilter']
+    semester_filter = search_request['semesterFilter']
+
+    json_results = semantic_search.get_similar_course_results(mnemonic, catalog_number, academic_level_filter=academic_level_filter, semester_filter=semester_filter, n=10)
+
+    encoded_results = jsonable_encoder(json_results)
+    return JSONResponse(content=encoded_results)
+
 
 # FastAPI Things
     # uvicorn main:app --host 0.0.0.0 --port 8080 --reload
