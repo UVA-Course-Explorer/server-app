@@ -2,11 +2,15 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.encoders import jsonable_encoder
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI, HTTPException, Security
+from fastapi.security import APIKeyHeader
+import os
 
 from search.semantic_search import SemanticSearch
 
 app = FastAPI()
 
+# CORS
 origins = [
     "https://uvacourses.netlify.app", 
     "localhost:3000"
@@ -21,6 +25,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# API Keys
+api_keys = [os.environ.get('SERVER_APP_API_KEY')]
+
+api_key_header = APIKeyHeader(name="X-API-Key")
+
+def get_api_key(api_key_header: str = Security(api_key_header)) -> str:
+    if api_key_header in api_keys:
+        return api_key_header
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Invalid or missing API Key",
+    )
+
 semantic_search = SemanticSearch()
 
 @app.get("/helloWorld")
@@ -33,7 +50,7 @@ async def get_members():
 
 
 @app.post('/search')
-async def search(request: Request):
+async def search(request: Request, api_key: str = Security(get_api_key)):
     search_request = await request.json()
     academic_level_filter = search_request['academicLevelFilter']
     semester_filter = search_request['semesterFilter']
@@ -45,7 +62,7 @@ async def search(request: Request):
 
 
 @app.post('/similar_courses')
-async def similar_courses(request: Request):
+async def similar_courses(request: Request, api_key: str = Security(get_api_key)):
     search_request = await request.json()
     
     mnemonic, catalog_number = search_request['mnemonic'], str(search_request['catalog_number'])
@@ -65,3 +82,19 @@ async def similar_courses(request: Request):
 # Docker Things
     # docker build --tag server-app .
     # docker run -d -p 8080:8080 server-app
+
+# PromQL Commands
+    # sum(increase(fly_app_http_responses_count{app="server-app", status="200"}[$time]))
+
+
+# Curl with API Key
+'''
+curl -X POST "http://localhost:8080/search" \
+-H "Content-Type: application/json" \
+-H "X-API-Key: <PUT API KEY HERE>" \
+-d '{
+    "academicLevelFilter": "all",
+    "semesterFilter": "all",
+    "searchInput": "machine learning"
+}'
+'''
