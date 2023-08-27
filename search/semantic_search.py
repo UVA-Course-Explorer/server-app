@@ -104,6 +104,11 @@ class SemanticSearch:
         top_n_data = self.get_top_n_data(query_vector, academic_level_filter=academic_level_filter, semester_filter=semester_filter, n=n)
         return top_n_data
 
+
+    def check_if_valid_course(self, mnemonic, catalog_number):
+        id_tuple = (mnemonic, str(catalog_number))
+        return id_tuple in self.data_to_index_dict.keys()
+
     
     def get_similar_course_results(self, mnemonic, catalog_number, academic_level_filter="all", semester_filter="all", n=10):
         id_tuple = (mnemonic, str(catalog_number))
