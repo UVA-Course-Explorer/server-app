@@ -30,6 +30,9 @@ class SemanticSearch:
         with open(os.path.join(data_dir, 'data_to_index_dict.pkl'), 'rb') as data_to_index_file:
             self.data_to_index_dict = pickle.load(data_to_index_file)
 
+        with open(os.path.join(data_dir, 'latest_sem_indices.pkl'), 'rb') as latest_semester_file:
+            self.latest_semester_indices = pickle.load(latest_semester_file)
+
         self.acad_level_to_indices_map = {}
 
         for level in ['Undergraduate', 'Graduate', 'Law', 'Graduate Business', 'Medical School', 'Non-Credit']:
