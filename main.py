@@ -52,7 +52,6 @@ async def search(request: Request):
         split_search_query[0] == "More" and 
         split_search_query[1] == "like" and
         semantic_search.check_if_valid_course(split_search_query[2], split_search_query[3])):
-        print("More like this request detected")
         json_results = semantic_search.get_similar_course_results(split_search_query[2], split_search_query[3], academic_level_filter=academic_level_filter, semester_filter=semester_filter, n=10)
         return JSONResponse(content=jsonable_encoder(json_results))
 
