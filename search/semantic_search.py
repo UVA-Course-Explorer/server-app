@@ -142,15 +142,14 @@ class SemanticSearch:
         return id_tuple in self.data_to_index_dict.keys()
 
 
-    # method that gets called for a "More like this" request
+    # method that gets called for a "similar courses" request
     def get_similar_course_results(self, mnemonic, catalog_number, academic_level_filter="all", semester_filter="all", n=10, return_graph_data=False):
         id_tuple = (mnemonic, str(catalog_number))
         if not id_tuple in self.data_to_index_dict.keys():
             return []  # no matching courses
         index = self.data_to_index_dict[id_tuple]
         query_vector = self.embedding_matrix[index]
-        top_n_data = self.get_top_n_data(query_vector, academic_level_filter=academic_level_filter, semester_filter=semester_filter, n=n+1, return_graph_data=return_graph_data)
-        top_n_data = top_n_data[1:]
+        top_n_data = self.get_top_n_data(query_vector, academic_level_filter=academic_level_filter, semester_filter=semester_filter, n=n, return_graph_data=return_graph_data)
         response = {
             "resultData": top_n_data,
             "PCATransformedQuery": self.get_pca_transformed_coord(query_vector).tolist() if return_graph_data else None
