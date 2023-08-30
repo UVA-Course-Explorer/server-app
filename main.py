@@ -9,7 +9,8 @@ app = FastAPI()
 
 origins = [
     "https://uvacourses.netlify.app", 
-    "localhost:3000"
+    "http://localhost:3000", 
+    "http://uvacoursesearch.com"
 ]
 
 app.add_middleware(
@@ -38,10 +39,12 @@ async def search(request: Request):
     academic_level_filter = search_request['academicLevelFilter']
     semester_filter = search_request['semesterFilter']
     search_input = search_request['searchInput']
+    return_graph_data = search_request['getGraphData']
 
-    json_results = semantic_search.get_search_results(search_input, academic_level_filter=academic_level_filter, semester_filter=semester_filter, n=10)
+    json_results = semantic_search.get_search_results(search_input, academic_level_filter=academic_level_filter, semester_filter=semester_filter, n=10, return_graph_data=return_graph_data)
     encoded_results = jsonable_encoder(json_results)
     return JSONResponse(content=encoded_results)
+
 
 
 @app.post('/similar_courses')
@@ -51,8 +54,9 @@ async def similar_courses(request: Request):
     mnemonic, catalog_number = search_request['mnemonic'], str(search_request['catalog_number'])
     academic_level_filter = search_request['academicLevelFilter']
     semester_filter = search_request['semesterFilter']
+    return_graph_data = search_request['getGraphData']
 
-    json_results = semantic_search.get_similar_course_results(mnemonic, catalog_number, academic_level_filter=academic_level_filter, semester_filter=semester_filter, n=10)
+    json_results = semantic_search.get_similar_course_results(mnemonic, catalog_number, academic_level_filter=academic_level_filter, semester_filter=semester_filter, n=10, return_graph_data=return_graph_data)
 
     encoded_results = jsonable_encoder(json_results)
     return JSONResponse(content=encoded_results)
