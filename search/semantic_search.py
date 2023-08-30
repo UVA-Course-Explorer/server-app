@@ -148,7 +148,7 @@ class SemanticSearch:
             return []  # no matching courses
         index = self.data_to_index_dict[id_tuple]
         query_vector = self.embedding_matrix[index]
-        top_n_data = self.get_top_n_data(query_vector, academic_level_filter=academic_level_filter, semester_filter=semester_filter, n=n+1, return_graph_data=return_graph_data)
+        top_n_data = self.get_top_n_data(query_vector, academic_level_filter=academic_level_filter, semester_filter=semester_filter, n=n, return_graph_data=return_graph_data)
         top_n_data = top_n_data[1:]
         response = {
             "resultData": top_n_data,
