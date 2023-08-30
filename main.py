@@ -28,6 +28,7 @@ semantic_search = SemanticSearch()
 async def hello():
     return "Hello World!"
 
+
 @app.get("/members")
 async def get_members():
     return {'members': ['John', 'Paul', 'George', 'Ringo']}
@@ -36,11 +37,23 @@ async def get_members():
 @app.post('/search')
 async def search(request: Request):
     search_request = await request.json()
+    search_input = search_request['searchInput']
+
+    # if the search input is empty or exceeds character limit, return an empty list
+    if len(search_input) == 0 or search_input.isspace() or len(search_input) > 1000:
+        return JSONResponse(content={'results': []})
     academic_level_filter = search_request['academicLevelFilter']
     semester_filter = search_request['semesterFilter']
     search_input = search_request['searchInput']
     return_graph_data = search_request['getGraphData']
 
+
+    # if the search input is a "Similar Courses Request" request, then handle it separately
+    split_search_query = search_input.strip().split()
+    if (len(split_search_query) == 2 and semantic_search.check_if_valid_course(split_search_query[0], split_search_query[1])):
+        json_results = semantic_search.get_similar_course_results(split_search_query[0], split_search_query[1], academic_level_filter=academic_level_filter, semester_filter=semester_filter, n=10, return_graph_data=return_graph_data)
+        return JSONResponse(content=jsonable_encoder(json_results))
+    
     json_results = semantic_search.get_search_results(search_input, academic_level_filter=academic_level_filter, semester_filter=semester_filter, n=10, return_graph_data=return_graph_data)
     encoded_results = jsonable_encoder(json_results)
     return JSONResponse(content=encoded_results)

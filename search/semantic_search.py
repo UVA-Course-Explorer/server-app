@@ -5,7 +5,6 @@ import json
 import os
 from sklearn.decomposition import PCA
 
-
 # Get rid later
 # from search.config import openai_key
 # openai.api_key = openai_key
@@ -40,12 +39,10 @@ class SemanticSearch:
             with open(filename, 'rb') as f:
                 self.acad_level_to_indices_map[level] = pickle.load(f)
         
-        # open the files needed for pca
-        # pca-transformed coordinate matrix
+
         with open(os.path.join(data_dir, "pca_transformed_coords.pkl"), 'rb') as f:
             self.pca_transformed_coords = pickle.load(f)
         
-        # actual pca object
         with open(os.path.join(data_dir, "pca.pkl"), 'rb') as f:
             self.pca = pickle.load(f)
 
@@ -112,6 +109,7 @@ class SemanticSearch:
             top_n_pca_transformed_coords = self.pca_transformed_coords[top_n_original_indices]
             for i in range(min(n, len(top_n_data))):
                 top_n_data[i]["PCATransformedCoord"] = top_n_pca_transformed_coords[i].tolist()
+
         return top_n_data
 
 
@@ -126,6 +124,7 @@ class SemanticSearch:
         return self.pca.transform(query_vector.reshape(1, -1)).flatten()
 
 
+
     # method that gets called for a "Search Request"
     def get_search_results(self, query, academic_level_filter ="all", semester_filter="all",  n=10, return_graph_data=False):
         query_vector = self.get_embedding(query, model=self.model)
@@ -135,6 +134,11 @@ class SemanticSearch:
             "PCATransformedQuery": self.get_pca_transformed_coord(query_vector).tolist() if return_graph_data else None
         }
         return response
+
+
+    def check_if_valid_course(self, mnemonic, catalog_number):
+        id_tuple = (mnemonic.upper(), str(catalog_number))
+        return id_tuple in self.data_to_index_dict.keys()
 
 
     # method that gets called for a "More like this" request
