@@ -10,7 +10,7 @@ app = FastAPI()
 origins = [
     "https://uvacourses.netlify.app", 
     "http://localhost:3000", 
-    "http://uvacoursesearch.com"
+    "https://www.uvacoursesearch.com"
 ]
 
 app.add_middleware(
@@ -57,6 +57,7 @@ async def search(request: Request):
     json_results = semantic_search.get_search_results(search_input, academic_level_filter=academic_level_filter, semester_filter=semester_filter, n=10, return_graph_data=return_graph_data)
     encoded_results = jsonable_encoder(json_results)
     return JSONResponse(content=encoded_results)
+
 
 
 @app.post('/similar_courses')
