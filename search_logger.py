@@ -1,8 +1,7 @@
-# from pymongo.mongo_client import MongoClient
-# from pymongo.server_api import ServerApi
 from motor.motor_asyncio import AsyncIOMotorClient
 import db_config
 import time
+import certifi
 
 class SearchLogger:
     def __init__(self):
@@ -12,7 +11,7 @@ class SearchLogger:
     async def insert_documents(self, docs, collection_name):
         try:
             # Connect to MongoDB
-            client = AsyncIOMotorClient(db_config.uri)
+            client = AsyncIOMotorClient(db_config.uri, tlsCAFile=certifi.where())
             db = client[db_config.db_name]
 
             collection = db[collection_name]

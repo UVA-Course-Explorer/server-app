@@ -13,34 +13,35 @@ class SemanticSearch:
         openai_api_key = os.environ.get('OPENAI_API_KEY')
         openai.api_key = openai_api_key
         self.model = "text-embedding-ada-002"
+        self.data_dir = "data"
         self.load_data()
+        
 
 
     def load_data(self):
         # loads data from pickle files into server memory
-        data_dir = "data"
-        with open(os.path.join(data_dir, 'embedding_matrix_32.pkl'), 'rb') as embedding_file:
+        with open(os.path.join(self.data_dir, 'embedding_matrix_32.pkl'), 'rb') as embedding_file:
             self.embedding_matrix = pickle.load(embedding_file)
 
-        with open(os.path.join(data_dir, 'index_to_data_dict.pkl'), 'rb') as data_dict_file:
+        with open(os.path.join(self.data_dir, 'index_to_data_dict.pkl'), 'rb') as data_dict_file:
             self.course_data_dict = pickle.load(data_dict_file)
 
-        with open(os.path.join(data_dir, 'data_to_index_dict.pkl'), 'rb') as data_to_index_file:
+        with open(os.path.join(self.data_dir, 'data_to_index_dict.pkl'), 'rb') as data_to_index_file:
             self.data_to_index_dict = pickle.load(data_to_index_file)
 
-        with open(os.path.join(data_dir, 'latest_sem_indices.pkl'), 'rb') as latest_semester_file:
+        with open(os.path.join(self.data_dir, 'latest_sem_indices.pkl'), 'rb') as latest_semester_file:
             self.latest_semester_indices = pickle.load(latest_semester_file)
 
         self.acad_level_to_indices_map = {}
 
         for level in ['Undergraduate', 'Graduate', 'Law', 'Graduate Business', 'Medical School', 'Non-Credit']:
-            filename = os.path.join(data_dir, f"{level}_indices.pkl")
+            filename = os.path.join(self.data_dir, f"{level}_indices.pkl")
             with open(filename, 'rb') as f:
                 self.acad_level_to_indices_map[level] = pickle.load(f)
         
         # open the files needed for pca
         # pca-transformed coordinate matrix
-        with open(os.path.join(data_dir, "pca_transformed_coords.pkl"), 'rb') as f:
+        with open(os.path.join(self.data_dir, "pca_transformed_coords.pkl"), 'rb') as f:
             self.pca_transformed_coords = pickle.load(f)
         
 
@@ -120,7 +121,7 @@ class SemanticSearch:
 
     def get_pca_transformed_coord(self, query_vector):
         # actual pca object
-        with open(os.path.join(data_dir, "pca.pkl"), 'rb') as f:
+        with open(os.path.join(self.data_dir, "pca.pkl"), 'rb') as f:
             pca = pickle.load(f)
         return pca.transform(query_vector.reshape(1, -1)).flatten()
 
