@@ -43,7 +43,7 @@ threadpoolctl==3.2.0
 tqdm==4.66.1
 typing_extensions==4.7.1
 ujson==5.8.0
-urllib3==2.0.4
+urllib3==1.26.6
 uvicorn==0.23.2
 uvloop==0.17.0
 watchfiles==0.20.0
