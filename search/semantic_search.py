@@ -3,8 +3,6 @@ import openai
 import numpy as np
 import json
 import os
-from sklearn.decomposition import PCA
-
 
 # Get rid later
 # from search.config import openai_key
@@ -45,9 +43,7 @@ class SemanticSearch:
         with open(os.path.join(data_dir, "pca_transformed_coords.pkl"), 'rb') as f:
             self.pca_transformed_coords = pickle.load(f)
         
-        # actual pca object
-        with open(os.path.join(data_dir, "pca.pkl"), 'rb') as f:
-            self.pca = pickle.load(f)
+
 
 
     def get_embedding(self, text, model="text-embedding-ada-002"):
@@ -123,7 +119,10 @@ class SemanticSearch:
 
 
     def get_pca_transformed_coord(self, query_vector):
-        return self.pca.transform(query_vector.reshape(1, -1)).flatten()
+        # actual pca object
+        with open(os.path.join(data_dir, "pca.pkl"), 'rb') as f:
+            pca = pickle.load(f)
+        return pca.transform(query_vector.reshape(1, -1)).flatten()
 
 
     # method that gets called for a "Search Request"
