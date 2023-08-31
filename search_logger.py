@@ -1,4 +1,4 @@
-from motor.motor_asyncio import AsyncIOMotorClient
+import pymongo
 import db_config
 import time
 import certifi
@@ -9,20 +9,24 @@ class SearchLogger:
         self.similar_courses_requests = []
 
     async def insert_documents(self, docs, collection_name):
+        client = None
         try:
             # Connect to MongoDB
-            client = AsyncIOMotorClient(db_config.uri, tlsCAFile=certifi.where())
+            # client = AsyncIOMotorClient(db_config.uri, ssl_cert_reqs=certifi.where())
+            print(certifi.where())
+            client = pymongo.MongoClient(db_config.uri, tlsCAFile=certifi.where())
             db = client[db_config.db_name]
 
             collection = db[collection_name]
             # Insert documents
-            result = await collection.insert_many(docs)
+            result = collection.insert_many(docs)
             print(f"Saved {len(result.inserted_ids)} searches")
         except Exception as e:
             print(f"Error when saving requests to {collection_name} database: {e}")
         finally:
             # Close the connection
-            client.close()
+            if client:
+                client.close()
 
 
     async def log_everything(self):
