@@ -2,6 +2,7 @@ import pymongo
 import db_config
 import time
 import certifi
+from motor.motor_asyncio import AsyncIOMotorClient
 
 class SearchLogger:
     def __init__(self):
@@ -12,14 +13,13 @@ class SearchLogger:
         client = None
         try:
             # Connect to MongoDB
-            # client = AsyncIOMotorClient(db_config.uri, ssl_cert_reqs=certifi.where())
-            print(certifi.where())
-            client = pymongo.MongoClient(db_config.uri, tlsCAFile=certifi.where())
+            client = AsyncIOMotorClient(db_config.uri)
+            # client = pymongo.MongoClient(db_config.uri, tlsCAFile=certifi.where())
             db = client[db_config.db_name]
 
             collection = db[collection_name]
             # Insert documents
-            result = collection.insert_many(docs)
+            result = await collection.insert_many(docs)
             print(f"Saved {len(result.inserted_ids)} searches")
         except Exception as e:
             print(f"Error when saving requests to {collection_name} database: {e}")
