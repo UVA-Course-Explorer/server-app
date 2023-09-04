@@ -17,7 +17,6 @@ class SemanticSearch:
         self.load_data()
         
 
-
     def load_data(self):
         # loads data from pickle files into server memory
         with open(os.path.join(self.data_dir, 'embedding_matrix_32.pkl'), 'rb') as embedding_file:
@@ -32,6 +31,9 @@ class SemanticSearch:
         with open(os.path.join(self.data_dir, 'latest_sem_indices.pkl'), 'rb') as latest_semester_file:
             self.latest_semester_indices = pickle.load(latest_semester_file)
 
+        with open(os.path.join(self.data_dir, 'topic_class_map.pkl'), 'rb') as topic_class_map_file:
+            self.topic_class_map = pickle.load(topic_class_map_file)
+
         self.acad_level_to_indices_map = {}
 
         for level in ['Undergraduate', 'Graduate', 'Law', 'Graduate Business', 'Medical School', 'Non-Credit']:
@@ -44,8 +46,6 @@ class SemanticSearch:
         with open(os.path.join(self.data_dir, "pca_transformed_coords.pkl"), 'rb') as f:
             self.pca_transformed_coords = pickle.load(f)
         
-
-
 
     def get_embedding(self, text, model="text-embedding-ada-002"):
         text = text.replace("\n", " ")
@@ -141,10 +141,33 @@ class SemanticSearch:
         id_tuple = (mnemonic.upper(), str(catalog_number))
         return id_tuple in self.data_to_index_dict.keys()
 
+    
+    def check_if_topic_class(self, mnemonic, catalog_number):
+        id_tuple = (mnemonic.upper(), str(catalog_number))
+        return id_tuple in self.topic_class_map.keys()
+
+
 
     # method that gets called for a "similar courses" request
     def get_similar_course_results(self, mnemonic, catalog_number, academic_level_filter="all", semester_filter="all", n=10, return_graph_data=False):
         id_tuple = (mnemonic.upper(), str(catalog_number))
+        # check to see if the user inputted the base catalog number of a special topics class. If so, just return the sessions of the special topic classes
+        if id_tuple in self.topic_class_map.keys():
+            resultData = []
+            for topic_class_tuple in  self.topic_class_map[id_tuple]:
+                if topic_class_tuple in self.data_to_index_dict.keys():
+                    resultData.append(self.course_data_dict[self.data_to_index_dict[topic_class_tuple]])
+            
+
+            resultData.sort(key=lambda x: x['catalog_number'])
+            for i in range(len(resultData)):
+                resultData[i]['similarity_score'] = 1.0
+            response = {
+                "resultData": resultData,
+                "PCATransformedQuery": None
+            }
+            return response
+
         # if not id_tuple in self.data_to_index_dict.keys():
         #     return []  # no matching courses
         index = self.data_to_index_dict[id_tuple]

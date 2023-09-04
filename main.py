@@ -59,15 +59,16 @@ async def search(request: Request):
 
     # if the search input is a "Similar Courses Request" request, then handle it separately
     split_search_query = search_input.lstrip().strip().split()
-    if (len(split_search_query) == 2 and semantic_search.check_if_valid_course(split_search_query[0], split_search_query[1])):
-        json_results = semantic_search.get_similar_course_results(split_search_query[0], split_search_query[1], academic_level_filter=academic_level_filter, semester_filter=semester_filter, n=10, return_graph_data=return_graph_data)
+
+    if len(split_search_query) == 2 and (semantic_search.check_if_topic_class(split_search_query[0], split_search_query[1]) or semantic_search.check_if_valid_course(split_search_query[0], split_search_query[1])):
+        json_results = semantic_search.get_similar_course_results(split_search_query[0], split_search_query[1], academic_level_filter=academic_level_filter, semester_filter=semester_filter, n=10, return_graph_data=False)
         await search_logger.log_similar_courses_request(search_request)
         return JSONResponse(content=jsonable_encoder(json_results))
     
 
     await search_logger.log_search_request(search_request)
 
-    json_results = semantic_search.get_search_results(search_input, academic_level_filter=academic_level_filter, semester_filter=semester_filter, n=10, return_graph_data=return_graph_data)
+    json_results = semantic_search.get_search_results(search_input, academic_level_filter=academic_level_filter, semester_filter=semester_filter, n=10, return_graph_data=False)
     encoded_results = jsonable_encoder(json_results)
 
     return JSONResponse(content=encoded_results)
@@ -84,7 +85,7 @@ async def similar_courses(request: Request):
 
     # log the similar courses request
     await search_logger.log_similar_courses_request(search_request)
-    json_results = semantic_search.get_similar_course_results(mnemonic, catalog_number, academic_level_filter=academic_level_filter, semester_filter=semester_filter, n=10, return_graph_data=return_graph_data)
+    json_results = semantic_search.get_similar_course_results(mnemonic, catalog_number, academic_level_filter=academic_level_filter, semester_filter=semester_filter, n=10, return_graph_data=False)
 
     encoded_results = jsonable_encoder(json_results)
     return JSONResponse(content=encoded_results)
