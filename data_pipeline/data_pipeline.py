@@ -238,8 +238,13 @@ class SearchDataGenerationPipeline():
         embedding_matrix = embedding_matrix.astype(np.float32)  # cast to float32 to save memory
         with open(os.path.join(self.output_dir, 'embedding_matrix_32.pkl'), 'wb') as f:
             pickle.dump(embedding_matrix, f)
-        
         return embedding_matrix
+    
+    def cast_to_str(self, val):
+        if isinstance(val, str):
+            return val
+        else:
+            return str(val)
 
 
     def run(self, df, output_dir, latest_semester):
@@ -247,6 +252,8 @@ class SearchDataGenerationPipeline():
             os.makedirs(output_dir)
         print("Preprocessing data...")
         df = self.drop_useless_columns(df)
+        # cast the catalog_nbr to a string
+        df['catalog_nbr'] = df['catalog_nbr'].apply(self.cast_to_str)
         df, _ = self.preprocess_classes_with_topics(df)
         df = self.filter_duplicated_classes(df)
         self.read_prev_embeddings_store()   # load previous embedding dict

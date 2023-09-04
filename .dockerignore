@@ -4,3 +4,5 @@ search/__pycache__
 search/config.py
 env
 memory_profile.py
+data_pipeline/
+data/data.csv
