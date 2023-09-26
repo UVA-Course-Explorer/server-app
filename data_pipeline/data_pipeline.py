@@ -178,6 +178,7 @@ class SearchDataGenerationPipeline():
                 'credits': row['units'],
                 'description': row['descriptions'],
                 'mnemonic': row['subject'],
+                'group': row['acad_org'],
                 'strm': row['strm']}
 
         with open(os.path.join(self.output_dir, 'index_to_data_dict.pkl'), 'wb') as f:
