@@ -6,3 +6,4 @@ env
 memory_profile.py
 data_pipeline/
 data/data.csv
+data/data.csv
