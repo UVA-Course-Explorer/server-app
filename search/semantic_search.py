@@ -1,8 +1,8 @@
 import pickle
 import openai
 import numpy as np
-import json
 import os
+import httpx
 
 # Get rid later
 # from search.config import openai_key
@@ -11,11 +11,14 @@ import os
 class SemanticSearch:
     def __init__(self):
         openai_api_key = os.environ.get('OPENAI_API_KEY')
+
         openai.api_key = openai_api_key
+
         self.model = "text-embedding-ada-002"
         self.data_dir = "data"
         self.load_data()
         
+
 
     def load_data(self):
         # loads data from pickle files into server memory
@@ -30,9 +33,6 @@ class SemanticSearch:
 
         with open(os.path.join(self.data_dir, 'latest_sem_indices.pkl'), 'rb') as latest_semester_file:
             self.latest_semester_indices = pickle.load(latest_semester_file)
-
-        with open(os.path.join(self.data_dir, 'topic_class_map.pkl'), 'rb') as topic_class_map_file:
-            self.topic_class_map = pickle.load(topic_class_map_file)
 
         self.acad_level_to_indices_map = {}
 
@@ -51,6 +51,11 @@ class SemanticSearch:
         text = text.replace("\n", " ")
         return np.array(openai.Embedding.create(input = [text], model=self.model)['data'][0]['embedding'], dtype=np.float32)
     
+
+    async def get_moderation(self, text):
+        moderation_response = openai.Moderation.create(input=text)
+        return moderation_response["results"][0]['flagged']
+
 
     def generate_filtered_embedding_matrix(self, academic_level_filter, semester_filter):
         original_indices = set([i for i in range(len(self.embedding_matrix))])
@@ -126,48 +131,38 @@ class SemanticSearch:
         return pca.transform(query_vector.reshape(1, -1)).flatten()
 
 
-    # method that gets called for a "Search Request"
-    def get_search_results(self, query, academic_level_filter ="all", semester_filter="all",  n=10, return_graph_data=False):
+    async def get_filtered_search_results(self, query, academic_level_filter="all", semester_filter="all", n=10, return_graph_data=False):
+        async with httpx.AsyncClient() as client:
+            raw_search_results_task = self.get_search_results(query, academic_level_filter=academic_level_filter, semester_filter=semester_filter, n=n, return_graph_data=return_graph_data)
+            moderation_task = self.get_moderation(query)
+            raw_search_results = await raw_search_results_task
+            flagged = await moderation_task
+            if flagged:
+                return {"resultData": [], "PCATransformedQuery": None}
+
+            return raw_search_results
+
+
+    async def get_search_results(self, query, academic_level_filter ="all", semester_filter="all",  n=10, return_graph_data=False):
         query_vector = self.get_embedding(query, model=self.model)
+            
         top_n_data = self.get_top_n_data(query_vector, academic_level_filter=academic_level_filter, semester_filter=semester_filter, n=n, return_graph_data=return_graph_data)
         response = {
             "resultData": top_n_data,
             "PCATransformedQuery": self.get_pca_transformed_coord(query_vector).tolist() if return_graph_data else None
         }
         return response
+    
 
 
     def check_if_valid_course(self, mnemonic, catalog_number):
         id_tuple = (mnemonic.upper(), str(catalog_number))
         return id_tuple in self.data_to_index_dict.keys()
 
-    
-    def check_if_topic_class(self, mnemonic, catalog_number):
-        id_tuple = (mnemonic.upper(), str(catalog_number))
-        return id_tuple in self.topic_class_map.keys()
-
-
 
     # method that gets called for a "similar courses" request
     def get_similar_course_results(self, mnemonic, catalog_number, academic_level_filter="all", semester_filter="all", n=10, return_graph_data=False):
         id_tuple = (mnemonic.upper(), str(catalog_number))
-        # check to see if the user inputted the base catalog number of a special topics class. If so, just return the sessions of the special topic classes
-        if id_tuple in self.topic_class_map.keys():
-            resultData = []
-            for topic_class_tuple in  self.topic_class_map[id_tuple]:
-                if topic_class_tuple in self.data_to_index_dict.keys():
-                    resultData.append(self.course_data_dict[self.data_to_index_dict[topic_class_tuple]])
-            
-
-            resultData.sort(key=lambda x: x['catalog_number'])
-            for i in range(len(resultData)):
-                resultData[i]['similarity_score'] = 1.0
-            response = {
-                "resultData": resultData,
-                "PCATransformedQuery": None
-            }
-            return response
-
         # if not id_tuple in self.data_to_index_dict.keys():
         #     return []  # no matching courses
         index = self.data_to_index_dict[id_tuple]
