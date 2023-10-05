@@ -3,6 +3,7 @@ import db_config
 import time
 import certifi
 from motor.motor_asyncio import AsyncIOMotorClient
+from bson import ObjectId  # Import ObjectId from bson module
 
 class SearchLogger:
     def __init__(self):
@@ -16,8 +17,9 @@ class SearchLogger:
             client = AsyncIOMotorClient(db_config.uri)
             # client = pymongo.MongoClient(db_config.uri, tlsCAFile=certifi.where())
             db = client[db_config.db_name]
-
             collection = db[collection_name]
+            for doc in docs:
+                doc['_id'] = ObjectId()
             # Insert documents
             result = await collection.insert_many(docs)
             print(f"Saved {len(result.inserted_ids)} searches")
