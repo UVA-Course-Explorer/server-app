@@ -9,7 +9,6 @@ app = FastAPI()
 
 origins = [
     "https://uvacourses.netlify.app", 
-    "http://localhost:3000", 
     "https://www.uvacourseexplorer.com",
     "https://www.uvacoursesearch.com"
 ]
