@@ -3,3 +3,5 @@ venv
 search/__pycache__
 search/config.py
 data/data.csv
+.DS_Store
+data_pipeline/data_pipeline_output/
