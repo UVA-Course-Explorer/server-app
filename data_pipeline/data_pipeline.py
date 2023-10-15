@@ -61,7 +61,7 @@ class SearchDataGenerationPipeline():
 
 
     def drop_useless_columns(self, df):
-        relevant_columns = ['acad_org','descriptions', 'catalog_nbr', 'class_nbr', 'class_section', 'subject', 'subject_descr', 'descr', 'units', 'acad_career_descr', 'strm', 'topic']
+        relevant_columns = ['acad_org','description', 'catalog_nbr', 'class_nbr', 'class_section', 'subject', 'subject_descr', 'descr', 'units', 'acad_career_descr', 'strm', 'topic']
         return df[relevant_columns]
 
 
@@ -135,11 +135,11 @@ class SearchDataGenerationPipeline():
 
 
     def generate_embedding_text_for_classes_with_topics(self, row):
-        return f"{row['subject']} {row['catalog_nbr']} {row['descr']} . {row['topic']}. {row['descriptions']}"
+        return f"{row['subject']} {row['catalog_nbr']} {row['descr']} . {row['topic']}. {row['description']}"
 
 
     def generate_embedding_text_for_classes_without_topics(self, row):
-        return row['subject_descr'] + ' - ' + row['descr'] + '. ' + row['descriptions']
+        return row['subject_descr'] + ' - ' + row['descr'] + '. ' + row['description']
 
     
     def generate_embedding_text(self, df):
@@ -176,7 +176,7 @@ class SearchDataGenerationPipeline():
                 'subject': row['subject_descr'],
                 'name': row['descr'],
                 'credits': row['units'],
-                'description': row['descriptions'],
+                'description': row['description'],
                 'mnemonic': row['subject'],
                 'group': row['acad_org'],
                 'strm': row['strm']}
@@ -282,7 +282,7 @@ class SearchDataGenerationPipeline():
 
 if __name__ == "__main__":
     output_dir = "data_pipeline_output/"
-    latest_semester = 1238
+    latest_semester = 1242
     df = pd.read_csv("prev_semester_data_with_descriptions.csv")
 
     pipeline = SearchDataGenerationPipeline(output_dir, latest_semester)

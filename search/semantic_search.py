@@ -11,14 +11,11 @@ import httpx
 class SemanticSearch:
     def __init__(self):
         openai_api_key = os.environ.get('OPENAI_API_KEY')
-
         openai.api_key = openai_api_key
-
         self.model = "text-embedding-ada-002"
         self.data_dir = "data"
         self.load_data()
         
-
 
     def load_data(self):
         # loads data from pickle files into server memory
@@ -33,7 +30,11 @@ class SemanticSearch:
 
         with open(os.path.join(self.data_dir, 'latest_sem_indices.pkl'), 'rb') as latest_semester_file:
             self.latest_semester_indices = pickle.load(latest_semester_file)
-
+        
+        with open(os.path.join(self.data_dir, 'topic_class_map.pkl'), 'rb') as topic_class_map_file:
+            self.topic_class_map = pickle.load(topic_class_map_file)
+        
+        
         self.acad_level_to_indices_map = {}
 
         for level in ['Undergraduate', 'Graduate', 'Law', 'Graduate Business', 'Medical School', 'Non-Credit']:
@@ -157,14 +158,29 @@ class SemanticSearch:
 
     def check_if_valid_course(self, mnemonic, catalog_number):
         id_tuple = (mnemonic.upper(), str(catalog_number))
-        return id_tuple in self.data_to_index_dict.keys()
+        return id_tuple in self.data_to_index_dict.keys() or id_tuple in self.topic_class_map.keys()
 
 
     # method that gets called for a "similar courses" request
     def get_similar_course_results(self, mnemonic, catalog_number, academic_level_filter="all", semester_filter="all", n=10, return_graph_data=False):
         id_tuple = (mnemonic.upper(), str(catalog_number))
-        # if not id_tuple in self.data_to_index_dict.keys():
-        #     return []  # no matching courses
+
+        # if it's a special topics course
+        if id_tuple in self.topic_class_map.keys():
+            results = [self.course_data_dict[self.data_to_index_dict[course]] for course in self.topic_class_map[id_tuple]]
+            
+            # set similarity scores to one
+            for result in results:
+                result["similarity_score"] = 1
+            
+            results.sort(key=lambda x: x["catalog_number"])
+
+            response = {
+                "resultData": results,
+                "PCATransformedQuery": None
+            }
+            return response
+        
         index = self.data_to_index_dict[id_tuple]
         query_vector = self.embedding_matrix[index]
         top_n_data = self.get_top_n_data(query_vector, academic_level_filter=academic_level_filter, semester_filter=semester_filter, n=n, return_graph_data=return_graph_data)
