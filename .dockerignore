@@ -7,4 +7,5 @@ memory_profile.py
 data_pipeline/
 data/data.csv
 .DS_Store
-data_pipeline/data_pipeline_output/
+data_pipeline/
+.git/
