@@ -37,14 +37,13 @@ async def save_data(group_data):
         new_df = pd.concat([new_df, group_data], ignore_index=True)  # Concatenate the rows
 
 
-
 #  1241, 1242
 
-strm = 1242
+strm = 1248
 
 
 # Load your data into a Pandas DataFrame
-df = pd.read_csv('combined.csv')
+df = pd.read_csv(f'{strm}.csv')
 
 df = df[df['strm'] == strm]
 
