@@ -11,3 +11,9 @@ env/
 *.ipynb
 data/
 *.pkl
+data_pipeline/*.csv
+*.pkl
+env/
+data_pipeline/create nomic viz.ipynb
+data_pipeline/prev_embedding_store.pkl
+data_pipeline/config.py
