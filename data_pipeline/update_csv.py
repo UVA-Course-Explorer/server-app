@@ -37,11 +37,15 @@ async def save_data(group_data):
         new_df = pd.concat([new_df, group_data], ignore_index=True)  # Concatenate the rows
 
 
+<<<<<<< Updated upstream
 
 #  1241, 1242
 
 strm = 1248
 
+=======
+strm = 1251
+>>>>>>> Stashed changes
 
 # Load your data into a Pandas DataFrame
 df = pd.read_csv(f'{strm}.csv')

@@ -10,8 +10,8 @@ app = FastAPI()
 origins = [
     "https://uvacourses.netlify.app", 
     "https://www.uvacourseexplorer.com",
-    "https://www.uvacoursesearch.com"
-]
+    "https://www.uvacoursesearch.com",
+    "http://localhost:3000"]  # or "https://localhost:3000]
 
 app.add_middleware(
     CORSMiddleware,

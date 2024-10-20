@@ -8,7 +8,7 @@ import pandas as pd
 # there's probably a better way to get around this
 
 class DataFetcher:
-    def __init__(self, path_to_db, table_name, strm, num_pages_in_batch=100, save_to_db=True):
+    def __init__(self, strm, table_name="sessions", num_pages_in_batch=100, save_to_db=False, path_to_db=""):
         self.path_to_db = path_to_db
         self.table_name = table_name
         self.strm = strm
@@ -59,13 +59,24 @@ class DataFetcher:
 
     def run(self):
         # fetch data from SIS
-        loop = asyncio.get_event_loop()
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
         loop.run_until_complete(self.get_all_courses_in_semester())
-        loop.close()
+
+        # try:
+        #     loop.run_until_complete(self.get_all_courses_in_semester())
+        # finally:
+        #     # Do not close the loop if it's the default loop
+        #     if not loop.is_running():
+        #         loop.close()
 
         # with open("sis_data.pkl", "rb") as f:
         #     self.courses = pickle.load(f)
-        
+
         df = pd.DataFrame(self.courses)
         df.to_csv(f"{self.strm}.csv", mode="w", header=True, index=False)
 
@@ -77,6 +88,7 @@ class DataFetcher:
 
 
 
+# semester_to_save = 1246
 
-data_fetcher = DataFetcher("data_1248.db", "sessions", 1248, save_to_db=False)
-data_fetcher.run()
+# data_fetcher = DataFetcher("sessions", semester_to_save, save_to_db=False)
+# data_fetcher.run()

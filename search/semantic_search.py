@@ -12,7 +12,7 @@ class SemanticSearch:
     def __init__(self):
         openai_api_key = os.environ.get('OPENAI_API_KEY')
         openai.api_key = openai_api_key
-        self.model = "text-embedding-ada-002"
+        self.model = "text-embedding-3-small"
         self.data_dir = "data"
         self.load_data()
         
