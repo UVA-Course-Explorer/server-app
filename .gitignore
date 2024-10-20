@@ -5,3 +5,9 @@ search/config.py
 data/data.csv
 .DS_Store
 data_pipeline/data_pipeline_output/
+env/
+*.csv
+*.iypnb_checkpoints/
+*.ipynb
+data/
+*.pkl
