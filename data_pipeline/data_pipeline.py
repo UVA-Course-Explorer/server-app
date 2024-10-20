@@ -19,7 +19,7 @@ class SearchDataGenerationPipeline():
 
     # generate embeddings using the openai api
     @retry(wait=wait_random_exponential(min=1, max=20), stop=stop_after_attempt(6))
-    def get_embedding_from_openai(self, text: str, model="text-embedding-ada-002"):
+    def get_embedding_from_openai(self, text: str, model="text-embedding-3-small"):
         return openai.Embedding.create(input=[text], model=model)["data"][0]["embedding"]
 
 
@@ -135,12 +135,11 @@ class SearchDataGenerationPipeline():
 
 
     def generate_embedding_text_for_classes_with_topics(self, row):
-        return f"{row['subject']} {row['catalog_nbr']} {row['descr']} . {row['topic']}. {row['description']}"
+        return f"{row['subject_descr']} - {row['acad_org']} {row['catalog_nbr']} - {row['descr']}. {row['topic']}. {row['description']} - {str(row['units'])} credits."
 
 
     def generate_embedding_text_for_classes_without_topics(self, row):
-        return row['subject_descr'] + ' - ' + row['descr'] + '. ' + row['description']
-
+        return f"{row['subject_descr']} - {row['acad_org']} {row['catalog_nbr']} - {row['descr']}. {row['description']} - {str(row['units'])} credits."
     
     def generate_embedding_text(self, df):
         df['embedding_text'] = df.apply(lambda row: self.generate_embedding_text_for_classes_with_topics(row) if not pd.isna(row['topic']) else self.generate_embedding_text_for_classes_without_topics(row), axis=1)
@@ -280,10 +279,10 @@ class SearchDataGenerationPipeline():
 
 
 
-if __name__ == "__main__":
-    output_dir = "data_pipeline_output/"
-    latest_semester = 1242
-    df = pd.read_csv("prev_semester_data_with_descriptions.csv")
+# if __name__ == "__main__":
+#     output_dir = "data_pipeline_output/"
+#     latest_semester = 1251
+#     df = pd.read_csv("combined.csv")
 
-    pipeline = SearchDataGenerationPipeline(output_dir, latest_semester)
-    pipeline.run(df, output_dir, latest_semester)
+#     pipeline = SearchDataGenerationPipeline(output_dir, latest_semester)
+#     pipeline.run(df, output_dir, latest_semester)
