@@ -28,7 +28,7 @@ class DataFetcher:
             if response.status == 200:
                 data = await response.json()
                 print(f"Got results for page {page} of {self.strm}")
-                return data
+                return data["classes"]
             else:
                 print(f"Failed to fetch data for page {page}")
                 return []
@@ -45,7 +45,7 @@ class DataFetcher:
                 tasks = [asyncio.create_task(self.fetch_courses(session, page)) for page in range(start_page, end_page)]
                 results = await asyncio.gather(*tasks)  # Fetch all pages concurrently
                 for page, data in enumerate(results):
-                    if data == []:
+                    if data is None or data == []:
                         print(f"Page {page} had no results, so we're done")
                         in_progress = False
                     for course in data:

@@ -11,7 +11,7 @@ import uuid
 from data_pipeline import SearchDataGenerationPipeline
 
 
-semesters_to_udpate = [1246, 1248, 1251, 1252]
+semesters_to_udpate = [1251, 1252, 1256, 1258]
 
 previous_semester_file = 'combined.csv'
 intermediate_csv_file = 'combined_mod.csv'
