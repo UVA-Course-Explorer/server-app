@@ -30,6 +30,15 @@ search_logger = SearchLogger()
 async def shutdown_event():
     await search_logger.log_everything()
 
+@app.on_event("startup")
+async def startup_event():
+    # fire-and-forget warmup to reduce first-search latency
+    try:
+        await semantic_search.warmup()
+    except Exception:
+        # don't block startup on warmup
+        pass
+
 
 @app.get("/helloWorld")
 async def hello():
