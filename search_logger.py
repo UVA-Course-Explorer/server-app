@@ -1,7 +1,5 @@
-import pymongo
 import db_config
 import time
-import certifi
 from motor.motor_asyncio import AsyncIOMotorClient
 from bson import ObjectId  # Import ObjectId from bson module
 
@@ -9,14 +7,14 @@ class SearchLogger:
     def __init__(self):
         self.search_requests = []
         self.similar_courses_requests = []
+        # Reuse a single client instance to avoid connection overhead per flush
+        self._client = AsyncIOMotorClient(db_config.uri) if db_config.uri else None
 
     async def insert_documents(self, docs, collection_name):
-        client = None
         try:
-            # Connect to MongoDB
-            client = AsyncIOMotorClient(db_config.uri)
-            # client = pymongo.MongoClient(db_config.uri, tlsCAFile=certifi.where())
-            db = client[db_config.db_name]
+            if not self._client:
+                return
+            db = self._client[db_config.db_name]
             collection = db[collection_name]
             for doc in docs:
                 doc['_id'] = ObjectId()
@@ -25,10 +23,6 @@ class SearchLogger:
             print(f"Saved {len(result.inserted_ids)} searches")
         except Exception as e:
             print(f"Error when saving requests to {collection_name} database: {e}")
-        finally:
-            # Close the connection
-            if client:
-                client.close()
 
 
     async def log_everything(self):
@@ -37,8 +31,15 @@ class SearchLogger:
             self.search_requests.clear()
 
         if len(self.similar_courses_requests) > 0:
-            self.insert_documents(self.similar_courses_requests, db_config.similar_courses_requests_collection)
+            await self.insert_documents(self.similar_courses_requests, db_config.similar_courses_requests_collection)
             self.similar_courses_requests.clear()
+
+    async def close(self):
+        try:
+            if self._client is not None:
+                self._client.close()
+        except Exception:
+            pass
 
 
     async def log_search_request(self, search_request):

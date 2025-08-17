@@ -96,15 +96,24 @@ class SemanticSearch:
 
 
     def generate_filtered_embedding_matrix(self, academic_level_filter, semester_filter):
-        original_indices = set([i for i in range(len(self.embedding_matrix))])
-   
-        if academic_level_filter != "all":
-            original_indices &= self.acad_level_to_indices_map[academic_level_filter]
-   
-        if semester_filter == "latest":
-            original_indices &= self.latest_semester_indices
+        # Start with all indices and perform set intersections using prebuilt sets
+        if academic_level_filter == "all" and semester_filter != "latest":
+            # No filtering needed
+            original_indices = np.arange(self.embedding_matrix.shape[0])
+            filtered_embedding_matrix = self.embedding_matrix
+            return filtered_embedding_matrix, original_indices
 
-        original_indices = np.array(list(original_indices))
+        if academic_level_filter == "all":
+            candidate_indices = self.latest_semester_indices if semester_filter == "latest" else set(range(self.embedding_matrix.shape[0]))
+        else:
+            candidate_indices = set(self.acad_level_to_indices_map.get(academic_level_filter, set()))
+            if semester_filter == "latest":
+                candidate_indices &= self.latest_semester_indices
+
+        if not candidate_indices:
+            return self.embedding_matrix[:0], np.array([], dtype=int)
+
+        original_indices = np.fromiter(candidate_indices, dtype=int)
         filtered_embedding_matrix = self.embedding_matrix[original_indices]
         return filtered_embedding_matrix, original_indices
 
