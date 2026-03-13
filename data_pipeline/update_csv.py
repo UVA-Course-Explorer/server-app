@@ -33,7 +33,7 @@ async def process_data(group_key, group_data):
 
 async def save_data(group_data):
     global new_df
-    with await data_save_lock:
+    async with data_save_lock:
         new_df = pd.concat([new_df, group_data], ignore_index=True)  # Concatenate the rows
 
 

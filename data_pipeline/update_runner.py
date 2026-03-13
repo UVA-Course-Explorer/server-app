@@ -11,12 +11,12 @@ import uuid
 from data_pipeline import SearchDataGenerationPipeline
 
 
-semesters_to_udpate = [1251, 1252, 1256, 1258]
+semesters_to_udpate = [1266, 1268]
 
-previous_semester_file = 'combined.csv'
-intermediate_csv_file = 'combined_mod.csv'
-output_dir = "data_pipeline_output/"
-replace_combined = False    # set to True if you want to replace the combined.csv file after population is complete
+previous_semester_file = 'combined_mod.csv'
+intermediate_csv_file = 'combined_mod_next.csv'
+output_dir = "../data"
+replace_combined = True
 
 latest_semester = semesters_to_udpate[-1]
 semaphore = None
@@ -25,6 +25,7 @@ new_df = None
 
 # remove_from_master
 def filter_csv(input_file_name, output_file_name, semesters_to_udpate, column_name='strm'):
+    semesters_to_udpate = {str(semester) for semester in semesters_to_udpate}
     with open(input_file_name, mode='r', newline='') as input_file:
         reader = csv.DictReader(input_file)
         fieldnames = reader.fieldnames
@@ -66,7 +67,7 @@ async def process_data(group_key, group_data):
 
 async def save_data(group_data):
     global new_df
-    with await data_save_lock:
+    async with data_save_lock:
         new_df = pd.concat([new_df, group_data], ignore_index=True)  # Concatenate the rows
 
 
@@ -160,9 +161,10 @@ def main():
     # Save the combined data to a new CSV file (same name as intermediate_csv_file)
     combined_data.to_csv(intermediate_csv_file, index=False)
 
+    pipeline_input_file = intermediate_csv_file
     if replace_combined:
-        os.remove(previous_semester_file)
-        os.rename(intermediate_csv_file, previous_semester_file)
+        os.replace(intermediate_csv_file, previous_semester_file)
+        pipeline_input_file = previous_semester_file
     
     print("Master CSV Generated")
 
@@ -170,7 +172,7 @@ def main():
     # run data pipeline
 
     print("Running Data Pipeline")
-    df = pd.read_csv(intermediate_csv_file)
+    df = pd.read_csv(pipeline_input_file)
 
     pipeline = SearchDataGenerationPipeline(output_dir, latest_semester)
     pipeline.run(df, output_dir, latest_semester)
