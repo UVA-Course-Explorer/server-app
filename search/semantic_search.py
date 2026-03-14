@@ -4,6 +4,7 @@ import numpy as np
 import os
 import asyncio
 from collections import OrderedDict
+from data_pipeline.teacher_index import normalize_teacher_name
 
 # Get rid later
 # from search.config import openai_key
@@ -20,6 +21,73 @@ class SemanticSearch:
         # small LRU cache for query embeddings to avoid duplicate OpenAI calls
         self.embedding_cache: OrderedDict[str, np.ndarray] = OrderedDict()
         self.max_cache_size = 1024
+        self.teacher_query_stopwords = {
+            "prof",
+            "profs",
+            "professor",
+            "teacher",
+            "instructor",
+            "dr",
+            "doctor",
+            "mr",
+            "mrs",
+            "ms",
+            "miss",
+            "mister",
+            "sir",
+            "madam",
+            "madame",
+            "rev",
+            "reverend",
+            "phd",
+            "ph",
+            "d",
+            "md",
+            "mba",
+            "jd",
+            "esq",
+        }
+        self.teacher_query_indicator_tokens = {
+            "prof",
+            "profs",
+            "professor",
+            "teacher",
+            "instructor",
+            "dr",
+            "doctor",
+            "mr",
+            "mrs",
+            "ms",
+            "miss",
+            "mister",
+            "sir",
+            "madam",
+            "madame",
+            "rev",
+            "reverend",
+        }
+        self.teacher_query_context_stopwords = {
+            "all",
+            "any",
+            "by",
+            "class",
+            "classes",
+            "course",
+            "courses",
+            "find",
+            "for",
+            "from",
+            "me",
+            "search",
+            "section",
+            "sections",
+            "show",
+            "taught",
+            "teach",
+            "teaches",
+            "teaching",
+            "with",
+        }
         self.load_data()
         
 
@@ -60,6 +128,28 @@ class SemanticSearch:
         # avoid division by zero
         row_norms[row_norms == 0] = 1.0
         self.embedding_matrix = self.embedding_matrix / row_norms
+
+        teacher_index_path = os.path.join(self.data_dir, 'teacher_course_index.pkl')
+        if os.path.exists(teacher_index_path):
+            with open(teacher_index_path, 'rb') as teacher_index_file:
+                self.teacher_course_index = pickle.load(teacher_index_file)
+        else:
+            self.teacher_course_index = {}
+
+        self.teacher_search_records = []
+        for normalized_name, teacher_entry in self.teacher_course_index.items():
+            self.teacher_search_records.append({
+                "normalized_name": normalized_name,
+                "display_name": teacher_entry["display_name"],
+                "courses": teacher_entry["courses"],
+                "tokens": normalized_name.split(),
+            })
+
+        self.latest_semester_value = None
+        if self.latest_semester_indices:
+            self.latest_semester_value = max(
+                self.course_data_dict[index]["strm"] for index in self.latest_semester_indices
+            )
         
 
     def _get_embedding_sync(self, text: str) -> np.ndarray:
@@ -124,6 +214,138 @@ class SemanticSearch:
         return similarities
 
 
+    def normalize_teacher_query(self, query):
+        normalized_query = normalize_teacher_name(query)
+        tokens = [
+            token for token in normalized_query.split()
+            if token not in self.teacher_query_stopwords
+            and token not in self.teacher_query_context_stopwords
+        ]
+        return " ".join(tokens)
+
+
+    def query_has_teacher_indicator(self, query):
+        normalized_query = normalize_teacher_name(query)
+        query_tokens = set(normalized_query.split())
+        return bool(
+            query_tokens & self.teacher_query_indicator_tokens
+            or {"taught", "teach", "teaches", "teaching", "with", "by"} & query_tokens
+        )
+
+
+    def teacher_tokens_match(self, query_tokens, teacher_tokens):
+        return all(
+            any(teacher_token.startswith(query_token) for teacher_token in teacher_tokens)
+            for query_token in query_tokens
+        )
+
+
+    def find_matching_teachers(self, query):
+        if not self.teacher_course_index:
+            return []
+
+        normalized_query = self.normalize_teacher_query(query)
+        if not normalized_query:
+            return []
+
+        exact_match = self.teacher_course_index.get(normalized_query)
+        if exact_match is not None:
+            return [{
+                "normalized_name": normalized_query,
+                "display_name": exact_match["display_name"],
+                "courses": exact_match["courses"],
+                "tokens": normalized_query.split(),
+                "match_score": 3,
+            }]
+
+        query_tokens = normalized_query.split()
+        has_teacher_indicator = self.query_has_teacher_indicator(query)
+        if len(query_tokens) == 0 or len(query_tokens) > 4:
+            return []
+        if len(query_tokens) == 1 and not has_teacher_indicator:
+            return []
+        if len(query_tokens) == 1 and len(query_tokens[0]) == 1:
+            return []
+
+        matches = []
+        for teacher_entry in self.teacher_search_records:
+            if not self.teacher_tokens_match(query_tokens, teacher_entry["tokens"]):
+                continue
+
+            exact_token_matches = sum(
+                1 for query_token in query_tokens
+                if query_token in teacher_entry["tokens"]
+            )
+            matches.append({
+                **teacher_entry,
+                "match_score": 2,
+                "exact_token_matches": exact_token_matches,
+            })
+
+        matches.sort(
+            key=lambda teacher_entry: (
+                teacher_entry["exact_token_matches"],
+                len(teacher_entry["tokens"]) == len(query_tokens),
+                len(teacher_entry["courses"]),
+                teacher_entry["display_name"],
+            ),
+            reverse=True,
+        )
+        return matches[:8]
+
+
+    def get_teacher_search_results(self, query, academic_level_filter="all", semester_filter="all"):
+        matching_teachers = self.find_matching_teachers(query)
+        if not matching_teachers:
+            return None
+
+        teacher_groups = []
+        for teacher_entry in matching_teachers:
+            courses = []
+            for course_index, teacher_course_data in teacher_entry["courses"].items():
+                course_data = self.course_data_dict.get(course_index)
+                if course_data is None:
+                    continue
+
+                if academic_level_filter != "all" and course_data["level"] != academic_level_filter:
+                    continue
+
+                if (
+                    semester_filter == "latest"
+                    and teacher_course_data["latest_taught_strm"] != self.latest_semester_value
+                ):
+                    continue
+
+                result = dict(course_data)
+                result["matched_teacher"] = teacher_entry["display_name"]
+                result["teacher_latest_taught_strm"] = teacher_course_data["latest_taught_strm"]
+                result["teacher_semester_count"] = teacher_course_data["semester_count"]
+                result["teacher_semesters_taught"] = teacher_course_data["strms"]
+                courses.append(result)
+
+            courses.sort(key=lambda result: (result["mnemonic"], result["catalog_number"]))
+            courses.sort(key=lambda result: result["teacher_latest_taught_strm"], reverse=True)
+
+            teacher_groups.append({
+                "teacherName": teacher_entry["display_name"],
+                "courseCount": len(courses),
+                "courses": courses,
+                "matchScore": teacher_entry["match_score"],
+            })
+
+        teacher_groups.sort(key=lambda teacher_group: teacher_group["teacherName"])
+        teacher_groups.sort(key=lambda teacher_group: teacher_group["courseCount"], reverse=True)
+        teacher_groups.sort(key=lambda teacher_group: teacher_group["matchScore"], reverse=True)
+
+        response = {
+            "resultType": "teacher_grouped",
+            "teacherGroups": teacher_groups,
+            "resultData": [],
+            "PCATransformedQuery": None,
+        }
+        return response
+
+
     def get_top_n_data_without_filters(self, query_vector, n=10, return_graph_data=False):
         # if there are no filters, just use the original embedding matrix
         similarities = self.cosine_similarity_search(query_vector, self.embedding_matrix)
@@ -171,7 +393,18 @@ class SemanticSearch:
 
 
     async def get_filtered_search_results(self, query, academic_level_filter="all", semester_filter="all", n=10, return_graph_data=False):
-        # Run embedding (and optionally moderation) concurrently
+        teacher_search_results = self.get_teacher_search_results(
+            query,
+            academic_level_filter=academic_level_filter,
+            semester_filter=semester_filter,
+        )
+        if teacher_search_results is not None:
+            if self.enable_moderation:
+                is_flagged = await self.get_moderation(query)
+                if is_flagged:
+                    return {"resultData": [], "PCATransformedQuery": None}
+            return teacher_search_results
+
         tasks = [self._get_embedding(query)]
         if self.enable_moderation:
             tasks.append(self.get_moderation(query))
@@ -182,6 +415,7 @@ class SemanticSearch:
 
         top_n_data = self.get_top_n_data(query_vector, academic_level_filter=academic_level_filter, semester_filter=semester_filter, n=n, return_graph_data=False)
         response = {
+            "resultType": "course_list",
             "resultData": top_n_data,
             "PCATransformedQuery": None
         }
@@ -214,6 +448,7 @@ class SemanticSearch:
             results.sort(key=lambda x: x["catalog_number"])
 
             response = {
+                "resultType": "course_list",
                 "resultData": results,
                 "PCATransformedQuery": None
             }
@@ -224,6 +459,7 @@ class SemanticSearch:
         query_vector = self.embedding_matrix[index]
         top_n_data = self.get_top_n_data(query_vector, academic_level_filter=academic_level_filter, semester_filter=semester_filter, n=n, return_graph_data=return_graph_data)
         response = {
+            "resultType": "course_list",
             "resultData": top_n_data,
             "PCATransformedQuery": None
         }

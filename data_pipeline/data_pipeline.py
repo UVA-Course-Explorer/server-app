@@ -6,6 +6,7 @@ import pickle
 import os
 import numpy as np
 from sklearn.decomposition import PCA
+from teacher_index import build_teacher_course_index, write_teacher_course_index
 
 
 class SearchDataGenerationPipeline():
@@ -226,6 +227,34 @@ class SearchDataGenerationPipeline():
             pickle.dump(latest_sem_indices, f)
 
 
+    def generate_teacher_course_index(self):
+        history_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../course-data/history'))
+        if not os.path.isdir(history_dir):
+            print(f"Skipping teacher index generation because history data was not found at {history_dir}")
+            return
+
+        with open(os.path.join(self.output_dir, 'data_to_index_dict.pkl'), 'rb') as f:
+            data_to_index_dict = pickle.load(f)
+
+        with open(os.path.join(self.output_dir, 'index_to_data_dict.pkl'), 'rb') as f:
+            course_data_dict = pickle.load(f)
+
+        with open(os.path.join(self.output_dir, 'topic_class_map.pkl'), 'rb') as f:
+            topic_class_map = pickle.load(f)
+
+        print("Generating teacher course index")
+        teacher_course_index = build_teacher_course_index(
+            history_dir=history_dir,
+            data_to_index_dict=data_to_index_dict,
+            course_data_dict=course_data_dict,
+            topic_class_map=topic_class_map,
+        )
+        write_teacher_course_index(
+            os.path.join(self.output_dir, 'teacher_course_index.pkl'),
+            teacher_course_index,
+        )
+
+
     def generate_embedding_matrix(self, df):
         embedding_vector_strings = df['embeddings']
         embedding_matrix = np.array([np.array(eval(embedding)) for embedding in embedding_vector_strings])
@@ -276,6 +305,7 @@ class SearchDataGenerationPipeline():
         self.generate_index_to_data_dict(df)
         self.generate_data_to_index_dict()
         self.generate_filter_indices(df)
+        self.generate_teacher_course_index()
 
 
 
