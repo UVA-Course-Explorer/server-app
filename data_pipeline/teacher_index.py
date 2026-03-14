@@ -31,6 +31,18 @@ def is_placeholder_teacher(name):
     return normalize_teacher_name(name) in PLACEHOLDER_TEACHER_NAMES
 
 
+def get_session_latest_enrollment(session):
+    points = session.get("points") or []
+    if not points:
+        return 0
+
+    latest_point = points[-1]
+    enrollment_total = latest_point.get("enrollment_total")
+    if enrollment_total is None:
+        return 0
+    return int(enrollment_total)
+
+
 def resolve_course_index(course, data_to_index_dict, course_data_dict, topic_class_map):
     subject = str(course.get("subject") or "").strip()
     catalog_number = str(course.get("catalog_number") or "").strip()
@@ -113,19 +125,36 @@ def build_teacher_course_index(history_dir, data_to_index_dict, course_data_dict
                         )
                         teacher_entry["display_name_counts"][teacher_name] += 1
 
-                        course_entry = teacher_entry["courses"].setdefault(course_index, set())
-                        course_entry.add(semester_value)
+                        course_entry = teacher_entry["courses"].setdefault(
+                            course_index,
+                            {
+                                "strms": set(),
+                                "enrollment_by_strm": {},
+                                "historical_enrollment_total": 0,
+                            },
+                        )
+                        course_entry["strms"].add(semester_value)
+
+                        session_enrollment = get_session_latest_enrollment(session)
+                        course_entry["historical_enrollment_total"] += session_enrollment
+                        course_entry["enrollment_by_strm"][semester_value] = (
+                            course_entry["enrollment_by_strm"].get(semester_value, 0)
+                            + session_enrollment
+                        )
 
     finalized_index = {}
     for normalized_name, teacher_entry in teacher_index.items():
         display_name = teacher_entry["display_name_counts"].most_common(1)[0][0]
         courses = {}
-        for course_index, semester_values in teacher_entry["courses"].items():
-            sorted_semesters = sorted(semester_values, reverse=True)
+        for course_index, course_entry in teacher_entry["courses"].items():
+            sorted_semesters = sorted(course_entry["strms"], reverse=True)
+            latest_taught_strm = sorted_semesters[0]
             courses[course_index] = {
-                "latest_taught_strm": sorted_semesters[0],
+                "latest_taught_strm": latest_taught_strm,
                 "semester_count": len(sorted_semesters),
                 "strms": sorted_semesters,
+                "historical_enrollment_total": course_entry["historical_enrollment_total"],
+                "latest_enrollment_total": course_entry["enrollment_by_strm"].get(latest_taught_strm, 0),
             }
 
         finalized_index[normalized_name] = {

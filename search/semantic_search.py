@@ -361,10 +361,28 @@ class SemanticSearch:
                 result["teacher_latest_taught_strm"] = teacher_course_data["latest_taught_strm"]
                 result["teacher_semester_count"] = teacher_course_data["semester_count"]
                 result["teacher_semesters_taught"] = teacher_course_data["strms"]
+                result["teacher_historical_enrollment_total"] = teacher_course_data.get("historical_enrollment_total", 0)
+                result["teacher_latest_enrollment_total"] = teacher_course_data.get("latest_enrollment_total", 0)
                 courses.append(result)
 
             courses.sort(key=lambda result: (result["mnemonic"], result["catalog_number"]))
             courses.sort(key=lambda result: result["teacher_latest_taught_strm"], reverse=True)
+            if semester_filter == "latest":
+                courses.sort(
+                    key=lambda result: (
+                        result["teacher_latest_enrollment_total"],
+                        result["teacher_historical_enrollment_total"],
+                    ),
+                    reverse=True,
+                )
+            else:
+                courses.sort(
+                    key=lambda result: (
+                        result["teacher_historical_enrollment_total"],
+                        result["teacher_latest_enrollment_total"],
+                    ),
+                    reverse=True,
+                )
 
             teacher_groups.append({
                 "teacherName": teacher_entry["display_name"],
