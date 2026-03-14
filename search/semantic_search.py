@@ -149,6 +149,7 @@ class SemanticSearch:
                 "display_name": teacher_entry["display_name"],
                 "courses": teacher_entry["courses"],
                 "tokens": normalized_name.split(),
+                "last_token": normalized_name.split()[-1] if normalized_name.split() else "",
             })
 
         self.latest_semester_value = None
@@ -246,6 +247,41 @@ class SemanticSearch:
         )
 
 
+    def find_single_token_teacher_matches(self, query_token, has_teacher_indicator):
+        if len(query_token) <= 1:
+            return []
+        if not has_teacher_indicator and len(query_token) < 3:
+            return []
+
+        matches = []
+        for teacher_entry in self.teacher_search_records:
+            last_token = teacher_entry["last_token"]
+            if not last_token:
+                continue
+
+            if last_token == query_token:
+                matches.append({
+                    **teacher_entry,
+                    "match_score": 2,
+                    "exact_token_matches": 1,
+                    "last_name_match_quality": 2,
+                })
+                continue
+
+            if len(query_token) >= 3 and last_token.startswith(query_token):
+                matches.append({
+                    **teacher_entry,
+                    "match_score": 1,
+                    "exact_token_matches": 0,
+                    "last_name_match_quality": 1,
+                })
+
+        matches.sort(key=lambda teacher_entry: teacher_entry["display_name"])
+        matches.sort(key=lambda teacher_entry: len(teacher_entry["courses"]), reverse=True)
+        matches.sort(key=lambda teacher_entry: teacher_entry["last_name_match_quality"], reverse=True)
+        return matches[:8]
+
+
     def find_matching_teachers(self, query):
         if not self.teacher_course_index:
             return []
@@ -268,10 +304,8 @@ class SemanticSearch:
         has_teacher_indicator = self.query_has_teacher_indicator(query)
         if len(query_tokens) == 0 or len(query_tokens) > 4:
             return []
-        if len(query_tokens) == 1 and not has_teacher_indicator:
-            return []
-        if len(query_tokens) == 1 and len(query_tokens[0]) == 1:
-            return []
+        if len(query_tokens) == 1:
+            return self.find_single_token_teacher_matches(query_tokens[0], has_teacher_indicator)
 
         matches = []
         for teacher_entry in self.teacher_search_records:
