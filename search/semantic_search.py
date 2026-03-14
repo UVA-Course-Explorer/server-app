@@ -395,10 +395,18 @@ class SemanticSearch:
         teacher_groups.sort(key=lambda teacher_group: teacher_group["courseCount"], reverse=True)
         teacher_groups.sort(key=lambda teacher_group: teacher_group["matchScore"], reverse=True)
 
+        # Keep a flat fallback list so older clients can still render teacher
+        # searches even if they do not understand grouped responses yet.
+        flat_result_data = [
+            course
+            for teacher_group in teacher_groups
+            for course in teacher_group["courses"]
+        ]
+
         response = {
             "resultType": "teacher_grouped",
             "teacherGroups": teacher_groups,
-            "resultData": [],
+            "resultData": flat_result_data,
             "PCATransformedQuery": None,
         }
         return response
