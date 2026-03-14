@@ -3,12 +3,18 @@ import openai
 import numpy as np
 import os
 import asyncio
+import re
 from collections import OrderedDict
-from data_pipeline.teacher_index import normalize_teacher_name
 
 # Get rid later
 # from search.config import openai_key
 # openai.api_key = openai_key
+
+
+def normalize_teacher_name(text):
+    normalized = re.sub(r"[^a-z0-9\s]", " ", str(text or "").lower())
+    normalized = re.sub(r"\s+", " ", normalized).strip()
+    return normalized
 
 class SemanticSearch:
     def __init__(self):
