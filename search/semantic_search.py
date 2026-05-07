@@ -231,6 +231,15 @@ class SemanticSearch:
         return " ".join(tokens)
 
 
+    def raw_teacher_query_tokens(self, query):
+        raw_tokens = re.findall(r"[A-Za-z0-9]+", str(query or ""))
+        return [
+            token for token in raw_tokens
+            if token.lower() not in self.teacher_query_stopwords
+            and token.lower() not in self.teacher_query_context_stopwords
+        ]
+
+
     def query_has_teacher_indicator(self, query):
         normalized_query = normalize_teacher_name(query)
         query_tokens = set(normalized_query.split())
@@ -247,20 +256,29 @@ class SemanticSearch:
         )
 
 
-    def find_single_token_teacher_matches(self, query_token, has_teacher_indicator):
+    def should_allow_short_last_name_match(self, raw_query_token, exact_match_count):
+        if exact_match_count > 1:
+            return True
+
+        if not raw_query_token:
+            return False
+
+        return raw_query_token[:1].isupper() and not raw_query_token.isupper()
+
+
+    def find_single_token_teacher_matches(self, query_token, has_teacher_indicator, raw_query_token=None):
         if len(query_token) <= 1:
-            return []
-        if not has_teacher_indicator and len(query_token) < 3:
             return []
 
         matches = []
+        exact_matches = []
         for teacher_entry in self.teacher_search_records:
             last_token = teacher_entry["last_token"]
             if not last_token:
                 continue
 
             if last_token == query_token:
-                matches.append({
+                exact_matches.append({
                     **teacher_entry,
                     "match_score": 2,
                     "exact_token_matches": 1,
@@ -275,6 +293,13 @@ class SemanticSearch:
                     "exact_token_matches": 0,
                     "last_name_match_quality": 1,
                 })
+
+        if (
+            has_teacher_indicator
+            or len(query_token) >= 3
+            or self.should_allow_short_last_name_match(raw_query_token, len(exact_matches))
+        ):
+            matches.extend(exact_matches)
 
         matches.sort(key=lambda teacher_entry: teacher_entry["display_name"])
         matches.sort(key=lambda teacher_entry: len(teacher_entry["courses"]), reverse=True)
@@ -305,7 +330,13 @@ class SemanticSearch:
         if len(query_tokens) == 0 or len(query_tokens) > 4:
             return []
         if len(query_tokens) == 1:
-            return self.find_single_token_teacher_matches(query_tokens[0], has_teacher_indicator)
+            raw_query_tokens = self.raw_teacher_query_tokens(query)
+            raw_query_token = raw_query_tokens[0] if len(raw_query_tokens) == 1 else None
+            return self.find_single_token_teacher_matches(
+                query_tokens[0],
+                has_teacher_indicator,
+                raw_query_token=raw_query_token,
+            )
 
         matches = []
         for teacher_entry in self.teacher_search_records:
